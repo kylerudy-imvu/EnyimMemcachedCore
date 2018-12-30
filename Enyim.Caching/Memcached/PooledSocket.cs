@@ -35,11 +35,11 @@ namespace Enyim.Caching.Memcached
 
             var timeout = connectionTimeout == TimeSpan.MaxValue
                 ? Timeout.Infinite
-                : (int) connectionTimeout.TotalMilliseconds;
+                : (int)connectionTimeout.TotalMilliseconds;
 
             var rcv = receiveTimeout == TimeSpan.MaxValue
                 ? Timeout.Infinite
-                : (int) receiveTimeout.TotalMilliseconds;
+                : (int)receiveTimeout.TotalMilliseconds;
 
             socket.ReceiveTimeout = rcv;
             socket.SendTimeout = rcv;
@@ -234,41 +234,30 @@ namespace Enyim.Caching.Memcached
             }
         }
 
-//        public async Task<byte[]> ReadBytesAsync(int count)
-//        {
-//            var buffer = new ArraySegment<byte>(new byte[count], 0, count);
-//            await this.socket.ReceiveAsync(buffer, SocketFlags.None);
-//            return buffer.Array;
-//        }
-//        
-        public async Task<byte[]> ReadBytesAsync(int count)
+        public async Task ReadAsync(byte[] buffer, int offset, int count)
         {
             this.CheckDisposed();
-            try
+
+            int read = 0;
+            int shouldRead = count;
+
+            while (read < count)
             {
-                var buffer = new ArraySegment<byte>(new byte[count], 0, count);
-                int read = 0;
-                int offset = 0;
-                int shouldRead = count;
-                while (read < count)
+                try
                 {
-                    var currentRead = await inputStream.ReadAsync(buffer.Array, offset, shouldRead);
+                    int currentRead = await this.inputStream.ReadAsync(buffer, offset, shouldRead);
                     if (currentRead < 1)
-                    {
                         continue;
-                    }
 
                     read += currentRead;
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-
-                return buffer.Array;
-            }
-            catch (IOException)
-            {
-                this.isAlive = false;
-                throw;
+                catch (IOException)
+                {
+                    this.isAlive = false;
+                    throw;
+                }
             }
         }
 

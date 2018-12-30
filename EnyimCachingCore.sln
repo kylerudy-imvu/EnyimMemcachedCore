@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{46CD2BBA-9
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sample", "sample", "{9954C92E-50E2-477C-AC47-31C857C46370}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleWebApp.IntegrationTests", "SampleWebApp.IntegrationTests\SampleWebApp.IntegrationTests.csproj", "{281CA49A-FEA5-4008-8D3D-0C4E1C548B8C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleWebApp.IntegrationTests", "SampleWebApp.IntegrationTests\SampleWebApp.IntegrationTests.csproj", "{281CA49A-FEA5-4008-8D3D-0C4E1C548B8C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
