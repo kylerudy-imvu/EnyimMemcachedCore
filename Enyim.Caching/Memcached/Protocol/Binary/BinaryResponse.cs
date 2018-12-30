@@ -64,7 +64,7 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
             if (dataLength > 0)
             {
                 var data = new byte[dataLength];
-                socket.Read(data, 0, dataLength);                
+                socket.Read(data, 0, dataLength);
 
                 this.Extra = new ArraySegment<byte>(data, 0, extraLength);
                 this.Data = new ArraySegment<byte>(data, extraLength, data.Length - extraLength);
@@ -79,7 +79,8 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
 
             if (!socket.IsAlive) return false;
 
-            var header = await socket.ReadBytesAsync(HeaderLength);
+            var header = new byte[HeaderLength];
+            await socket.ReadAsync(header, 0, header.Length);
 
             int dataLength, extraLength;
 
@@ -87,7 +88,8 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
 
             if (dataLength > 0)
             {
-                var data = await socket.ReadBytesAsync(dataLength);
+                var data = new byte[dataLength];
+                await socket.ReadAsync(data, 0, dataLength);
 
                 this.Extra = new ArraySegment<byte>(data, 0, extraLength);
                 this.Data = new ArraySegment<byte>(data, extraLength, data.Length - extraLength);

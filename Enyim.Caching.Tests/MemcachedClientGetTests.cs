@@ -103,8 +103,8 @@ namespace Enyim.Caching.Tests
         {
             var key = "GetValueOrCreateAsyncTest_" + Guid.NewGuid();
             var posts1 = await _client.GetValueOrCreateAsync(
-                key, 
-                10, 
+                key,
+                10,
                 async () => await GenerateValue());
             Assert.NotNull(posts1);
 
@@ -129,6 +129,7 @@ namespace Enyim.Caching.Tests
     internal class BlogPost
     {
         public string Title { get; set; }
+        public string Tags { get; set; }
         public string Body { get; set; }
     }
 }
