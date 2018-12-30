@@ -223,11 +223,31 @@ namespace Enyim.Caching.Memcached
             }
         }
 
-        public async Task<byte[]> ReadBytesAsync(int count)
+        public async Task ReadAsync(byte[] buffer, int offset, int count)
         {
-            var buffer = new ArraySegment<byte>(new byte[count], 0, count);
-            await this.socket.ReceiveAsync(buffer, SocketFlags.None);
-            return buffer.Array;
+            this.CheckDisposed();
+
+            int read = 0;
+            int shouldRead = count;
+
+            while (read < count)
+            {
+                try
+                {
+                    int currentRead = await this.inputStream.ReadAsync(buffer, offset, shouldRead);
+                    if (currentRead < 1)
+                        continue;
+
+                    read += currentRead;
+                    offset += currentRead;
+                    shouldRead -= currentRead;
+                }
+                catch (IOException)
+                {
+                    this.isAlive = false;
+                    throw;
+                }
+            }
         }
 
         /// <summary>

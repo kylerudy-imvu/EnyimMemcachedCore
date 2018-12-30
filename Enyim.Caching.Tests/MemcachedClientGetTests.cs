@@ -103,8 +103,8 @@ namespace Enyim.Caching.Tests
         {
             var key = "GetValueOrCreateAsyncTest_" + Guid.NewGuid();
             var posts1 = await _client.GetValueOrCreateAsync(
-                key, 
-                10, 
+                key,
+                10,
                 async () => await GenerateValue());
             Assert.NotNull(posts1);
 
@@ -114,15 +114,16 @@ namespace Enyim.Caching.Tests
             Assert.Equal(posts1.First().Title, posts2.First().Title);
         }
 
-        private Task<IEnumerable<BlogPost>> GenerateValue()
+        private ValueTask<IEnumerable<BlogPost>> GenerateValue()
         {
-            var posts = new List<BlogPost>()
+            var posts = new List<BlogPost>();
+
+            for (var i = 0; i < 150; i++)
             {
-                new BlogPost{ Title = "test title 1", Body = "test body 1" },
-                new BlogPost{ Title = "test title 2", Body = "test body 2" }
+                posts.Add(new BlogPost { Title = $"test title {i}", Body = $"test body {i}" });
             };
 
-            return Task.FromResult(posts.AsEnumerable());
+            return new ValueTask<IEnumerable<BlogPost>>(posts);
         }
     }
 
