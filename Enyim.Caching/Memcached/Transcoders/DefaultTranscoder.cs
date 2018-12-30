@@ -356,7 +356,7 @@ namespace Enyim.Caching.Memcached
         {
             using (var ms = new MemoryStream(value.Array, value.Offset, value.Count))
             {
-                using (BsonReader reader = new BsonReader(ms))
+                using (var reader = new BsonDataReader(ms))
                 {
                     JsonSerializer serializer = new JsonSerializer();
                     return serializer.Deserialize(reader);
