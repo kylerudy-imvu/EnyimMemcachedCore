@@ -90,22 +90,22 @@ namespace Enyim.Caching
 
         public void Add(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Add, key, value, new TimeSpan(0, 0, cacheSeconds));
+            Store(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public async Task AddAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Add, key, value, new TimeSpan(0, 0, cacheSeconds));
+            await StoreAsync(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public void Set(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Set, key, value, new TimeSpan(0, 0, cacheSeconds));
+            Store(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public async Task SetAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Set, key, value, new TimeSpan(0, 0, cacheSeconds));
+            await StoreAsync(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         /// <summary>
