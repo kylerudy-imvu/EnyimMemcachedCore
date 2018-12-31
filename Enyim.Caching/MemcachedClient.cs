@@ -1161,6 +1161,11 @@ namespace Enyim.Caching
                 // infinity
                 if (validFor == TimeSpan.Zero || validFor == TimeSpan.MaxValue) return 0;
 
+                if (validFor.Value.TotalSeconds <= MaxSeconds)
+                {
+                    return (uint)validFor.Value.TotalSeconds;
+                }
+
                 expiresAt = DateTime.Now.Add(validFor.Value);
             }
 
