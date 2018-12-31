@@ -90,22 +90,22 @@ namespace Enyim.Caching
 
         public void Add(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Add, key, value, new TimeSpan(0, 0, cacheSeconds));
+            Store(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public async Task AddAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Add, key, value, new TimeSpan(0, 0, cacheSeconds));
+            await StoreAsync(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public void Set(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Set, key, value, new TimeSpan(0, 0, cacheSeconds));
+            Store(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         public async Task SetAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Set, key, value, new TimeSpan(0, 0, cacheSeconds));
+            await StoreAsync(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         /// <summary>
@@ -1160,6 +1160,11 @@ namespace Enyim.Caching
             {
                 // infinity
                 if (validFor == TimeSpan.Zero || validFor == TimeSpan.MaxValue) return 0;
+
+                if (validFor.Value.TotalSeconds <= MaxSeconds)
+                {
+                    return (uint)validFor.Value.TotalSeconds;
+                }
 
                 expiresAt = DateTime.Now.Add(validFor.Value);
             }
