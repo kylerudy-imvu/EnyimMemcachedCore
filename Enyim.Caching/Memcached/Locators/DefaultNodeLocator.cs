@@ -11,7 +11,7 @@ namespace Enyim.Caching.Memcached
 	/// </summary>
 	public sealed class DefaultNodeLocator : IMemcachedNodeLocator, IDisposable
 	{
-		private const int ServerAddressMutations = 100;
+		private readonly int serverAddressMutations;
 
 		// holds all server keys for mapping an item key to the server consistently
 		private uint[] keys;
@@ -21,23 +21,28 @@ namespace Enyim.Caching.Memcached
 		private List<IMemcachedNode> allServers;
 		private ReaderWriterLockSlim serverAccessLock;
 
-		public DefaultNodeLocator()
+		public DefaultNodeLocator() : this(100)
+		{
+		}
+
+		public DefaultNodeLocator(int serverAddressMutations)
 		{
 			this.servers = new Dictionary<uint, IMemcachedNode>(new UIntEqualityComparer());
 			this.deadServers = new Dictionary<IMemcachedNode, bool>();
 			this.allServers = new List<IMemcachedNode>();
 			this.serverAccessLock = new ReaderWriterLockSlim();
+			this.serverAddressMutations = serverAddressMutations;
 		}
 
 		private void BuildIndex(List<IMemcachedNode> nodes)
 		{
-			var keys = new uint[nodes.Count * DefaultNodeLocator.ServerAddressMutations];
+			var keys = new uint[nodes.Count * this.serverAddressMutations];
 
 			int nodeIdx = 0;
 
 			foreach (IMemcachedNode node in nodes)
 			{
-				var tmpKeys = DefaultNodeLocator.GenerateKeys(node, DefaultNodeLocator.ServerAddressMutations);
+				var tmpKeys = DefaultNodeLocator.GenerateKeys(node, this.serverAddressMutations);
 
 				for (var i = 0; i < tmpKeys.Length; i++)
 				{
@@ -45,7 +50,7 @@ namespace Enyim.Caching.Memcached
 				}
 
 				tmpKeys.CopyTo(keys, nodeIdx);
-				nodeIdx += DefaultNodeLocator.ServerAddressMutations;
+				nodeIdx += this.serverAddressMutations;
 			}
 
 			Array.Sort<uint>(keys);
