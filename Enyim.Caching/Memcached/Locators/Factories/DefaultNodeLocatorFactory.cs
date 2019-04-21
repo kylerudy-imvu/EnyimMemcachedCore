@@ -5,18 +5,18 @@ namespace Enyim.Caching.Memcached.LocatorFactories
     /// <summary>
     /// Create DefaultNodeLocator with any ServerAddressMutations
     /// </summary>
-    public class DefaultNodeLocatorFactory :IProviderFactory<IMemcachedNodeLocator>
+    public class DefaultNodeLocatorFactory : IProviderFactory<IMemcachedNodeLocator>
     {
-        private readonly int serverAddressMutations;
+        private readonly int _serverAddressMutations;
 
         public DefaultNodeLocatorFactory(int serverAddressMutations)
         {
-            this.serverAddressMutations = serverAddressMutations;
+            _serverAddressMutations = serverAddressMutations;
         }
 
         public IMemcachedNodeLocator Create()
         {
-            return new DefaultNodeLocator(serverAddressMutations);
+            return new DefaultNodeLocator(_serverAddressMutations);
         }
 
         public void Initialize(Dictionary<string, string> parameters)
