@@ -234,23 +234,34 @@ namespace Enyim.Caching
             return false;
         }
 
-        public void Add(string key, object value, int cacheSeconds)
+        public bool Add(string key, object value, int cacheSeconds)
         {
+            return true;
         }
 
-        public Task AddAsync(string key, object value, int cacheSeconds)
+        public Task<bool> AddAsync(string key, object value, int cacheSeconds)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
 
-        public void Set(string key, object value, int cacheSeconds)
+        public bool Set(string key, object value, int cacheSeconds)
         {
-
+            return true;
         }
 
-        public Task SetAsync(string key, object value, int cacheSeconds)
+        public Task<bool> SetAsync(string key, object value, int cacheSeconds)
         {
-            return Task.CompletedTask;
+            return Task.FromResult(true);
+        }
+        
+        public bool Replace(string key, object value, int cacheSeconds)
+        {
+            return true;
+        }
+
+        public Task<bool> ReplaceAsync(string key, object value, int cacheSeconds)
+        {
+            return Task.FromResult(true);
         }
 
         public Task<T> GetValueOrCreateAsync<T>(string key, int cacheSeconds, Func<Task<T>> generator)
