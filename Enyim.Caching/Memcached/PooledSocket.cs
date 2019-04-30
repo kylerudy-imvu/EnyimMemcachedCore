@@ -44,7 +44,10 @@ namespace Enyim.Caching.Memcached
             socket.ReceiveTimeout = rcv;
             socket.SendTimeout = rcv;
 
-            ConnectWithTimeout(socket, endpoint, timeout);
+            if (!ConnectWithTimeout(socket, endpoint, timeout))
+            {
+                throw new TimeoutException($"Could not connect to {endpoint.Host}:{endpoint.Port}.");
+            }
 
             this.socket = socket;
             this.endpoint = endpoint;
@@ -52,8 +55,9 @@ namespace Enyim.Caching.Memcached
             this.inputStream = new NetworkStream(socket);
         }
 
-        private void ConnectWithTimeout(Socket socket, DnsEndPoint endpoint, int timeout)
+        private bool ConnectWithTimeout(Socket socket, DnsEndPoint endpoint, int timeout)
         {
+            bool connected = false;
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             var args = new SocketAsyncEventArgs();
 
@@ -64,25 +68,31 @@ namespace Enyim.Caching.Memcached
                     .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
                 if (address == null)
                     throw new ArgumentException(String.Format("Could not resolve host '{0}'.", endpoint.Host));
-                args.RemoteEndPoint = new IPEndPoint(address, endpoint.Port);
+            }
+
+            //Learn from https://github.com/dotnet/corefx/blob/release/2.2/src/System.Data.SqlClient/src/System/Data/SqlClient/SNI/SNITcpHandle.cs#L180
+            var cts = new CancellationTokenSource();
+            cts.CancelAfter(timeout);
+            void Cancel()
+            {
+                if (!socket.Connected)
+                {
+                    socket.Dispose();
+                }
+            }
+            cts.Token.Register(Cancel);
+
+            socket.Connect(address, endpoint.Port);
+            if (socket.Connected)
+            {
+                connected = true;
             }
             else
             {
-                //DnsEndPoint is not working on linux
-                args.RemoteEndPoint = new IPEndPoint(address, endpoint.Port);
+                socket.Dispose();
             }
 
-            using (var mres = new ManualResetEventSlim())
-            {
-                args.Completed += (s, e) => mres.Set();
-                if (socket.ConnectAsync(args))
-                {
-                    if (!mres.Wait(timeout))
-                    {
-                        throw new TimeoutException("Could not connect to " + endpoint);
-                    }
-                }
-            }
+            return connected;
         }
 
         public Action<PooledSocket> CleanupCallback { get; set; }
