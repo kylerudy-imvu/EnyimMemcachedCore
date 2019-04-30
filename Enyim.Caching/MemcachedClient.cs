@@ -88,24 +88,34 @@ namespace Enyim.Caching
 
         public event Action<IMemcachedNode> NodeFailed;
 
-        public void Add(string key, object value, int cacheSeconds)
+        public bool Add(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
+            return Store(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
-        public async Task AddAsync(string key, object value, int cacheSeconds)
+        public async Task<bool> AddAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
+            return await StoreAsync(StoreMode.Add, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
-        public void Set(string key, object value, int cacheSeconds)
+        public bool Set(string key, object value, int cacheSeconds)
         {
-            Store(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
+            return Store(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
-        public async Task SetAsync(string key, object value, int cacheSeconds)
+        public async Task<bool> SetAsync(string key, object value, int cacheSeconds)
         {
-            await StoreAsync(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
+            return await StoreAsync(StoreMode.Set, key, value, TimeSpan.FromSeconds(cacheSeconds));
+        }
+
+        public bool Replace(string key, object value, int cacheSeconds)
+        {
+            return Store(StoreMode.Replace, key, value, TimeSpan.FromSeconds(cacheSeconds));
+        }
+
+        public async Task<bool> ReplaceAsync(string key, object value, int cacheSeconds)
+        {
+            return await StoreAsync(StoreMode.Replace, key, value, TimeSpan.FromSeconds(cacheSeconds));
         }
 
         /// <summary>
