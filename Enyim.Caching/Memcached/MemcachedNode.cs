@@ -96,7 +96,7 @@ namespace Enyim.Caching.Memcached
                     if (this.isDisposed) return false;
 
                     // try to connect to the server
-                    using (var socket = this.CreateSocket());
+                    using (var socket = this.CreateSocket()) ;
 
                     if (this.internalPoolImpl.IsAlive)
                         return true;
@@ -521,7 +521,7 @@ namespace Enyim.Caching.Memcached
             }
             catch (Exception ex)
             {
-                _logger.LogError(new EventId(this.GetHashCode(), nameof(MemcachedNode)), ex, $"Create {nameof(PooledSocket)}");
+                _logger.LogError(ex, $"Create {nameof(PooledSocket)}");
                 throw;
             }
         }
