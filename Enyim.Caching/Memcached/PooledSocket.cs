@@ -60,17 +60,6 @@ namespace Enyim.Caching.Memcached
             bool connected = false;
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
-            //Workaround for https://github.com/dotnet/corefx/issues/26840
-            if (endpoint is DnsEndPoint)
-            {
-                var dnsEndPoint = (DnsEndPoint)endpoint;
-                var address = Dns.GetHostAddresses(dnsEndPoint.Host).FirstOrDefault(ip =>
-                    ip.AddressFamily == AddressFamily.InterNetwork);
-                if (address == null)
-                    throw new ArgumentException(String.Format("Could not resolve host '{0}'.", endpoint));
-                endpoint = new IPEndPoint(address, dnsEndPoint.Port);
-            }
-
             //Learn from https://github.com/dotnet/corefx/blob/release/2.2/src/System.Data.SqlClient/src/System/Data/SqlClient/SNI/SNITcpHandle.cs#L180
             var cts = new CancellationTokenSource();
             cts.CancelAfter(timeout);
