@@ -201,7 +201,7 @@ namespace Enyim.Caching.Memcached
             private readonly int maxItems;
 
             private MemcachedNode ownerNode;
-            private readonly EndPoint endPoint;
+            private readonly EndPoint _endPoint;
             private readonly TimeSpan queueTimeout;
             private Semaphore semaphore;
 
@@ -221,7 +221,7 @@ namespace Enyim.Caching.Memcached
 
                 this.ownerNode = ownerNode;
                 this.isAlive = true;
-                this.endPoint = ownerNode.EndPoint;
+                _endPoint = ownerNode.EndPoint;
                 this.queueTimeout = config.QueueTimeout;
 
                 this.minItems = config.MinPoolSize;
@@ -251,7 +251,7 @@ namespace Enyim.Caching.Memcached
                     }
 
                     if (_logger.IsEnabled(LogLevel.Debug))
-                        _logger.LogDebug("Pool has been inited for {0} with {1} sockets", this.endPoint, this.minItems);
+                        _logger.LogDebug("Pool has been inited for {0} with {1} sockets", _endPoint, this.minItems);
 
                 }
                 catch (Exception e)
@@ -289,11 +289,11 @@ namespace Enyim.Caching.Memcached
                 var result = new PooledSocketResult();
                 var message = string.Empty;
 
-                if (_isDebugEnabled) _logger.LogDebug("Acquiring stream from pool on node " + this.endPoint);
+                if (_isDebugEnabled) _logger.LogDebug($"Acquiring stream from pool on node '{_endPoint}'");
 
                 if (!this.isAlive || this.isDisposed)
                 {
-                    message = "Pool is dead or disposed, returning null. " + this.endPoint;
+                    message = "Pool is dead or disposed, returning null. " + _endPoint;
                     result.Fail(message);
 
                     if (_isDebugEnabled) _logger.LogDebug(message);
@@ -305,7 +305,7 @@ namespace Enyim.Caching.Memcached
 
                 if (!this.semaphore.WaitOne(this.queueTimeout))
                 {
-                    message = "Pool is full, timeouting. " + this.endPoint;
+                    message = "Pool is full, timeouting. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
                     result.Fail(message, new TimeoutException());
 
@@ -316,7 +316,7 @@ namespace Enyim.Caching.Memcached
                 // maybe we died while waiting
                 if (!this.isAlive)
                 {
-                    message = "Pool is dead, returning null. " + this.endPoint;
+                    message = "Pool is dead, returning null. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
                     result.Fail(message);
 
@@ -353,7 +353,7 @@ namespace Enyim.Caching.Memcached
                 }
 
                 // free item pool is empty
-                message = "Could not get a socket from the pool, Creating a new item. " + this.endPoint;
+                message = "Could not get a socket from the pool, Creating a new item. " + _endPoint;
                 if (_isDebugEnabled) _logger.LogDebug(message);
 
 
@@ -368,7 +368,7 @@ namespace Enyim.Caching.Memcached
                 }
                 catch (Exception e)
                 {
-                    message = "Failed to create socket. " + this.endPoint;
+                    message = "Failed to create socket. " + _endPoint;
                     _logger.LogError(message, e);
 
                     // eventhough this item failed the failure policy may keep the pool alive
@@ -389,7 +389,7 @@ namespace Enyim.Caching.Memcached
 
             private void MarkAsDead()
             {
-                if (_isDebugEnabled) _logger.LogDebug("Mark as dead was requested for {0}", this.endPoint);
+                if (_isDebugEnabled) _logger.LogDebug("Mark as dead was requested for {0}", _endPoint);
 
                 var shouldFail = ownerNode.FailurePolicy.ShouldFail();
 
@@ -397,7 +397,7 @@ namespace Enyim.Caching.Memcached
 
                 if (shouldFail)
                 {
-                    if (_logger.IsEnabled(LogLevel.Warning)) _logger.LogWarning("Marking node {0} as dead", this.endPoint);
+                    if (_logger.IsEnabled(LogLevel.Warning)) _logger.LogWarning("Marking node {0} as dead", _endPoint);
 
                     this.isAlive = false;
                     this.markedAsDeadUtc = DateTime.UtcNow;
