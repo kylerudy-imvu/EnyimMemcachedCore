@@ -59,7 +59,6 @@ namespace Enyim.Caching.Memcached
         {
             bool connected = false;
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-            var args = new SocketAsyncEventArgs();
 
             //Workaround for https://github.com/dotnet/corefx/issues/26840
             if (endpoint is DnsEndPoint)
