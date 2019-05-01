@@ -27,13 +27,13 @@ namespace Enyim.Caching.Memcached
 
         private bool isDisposed;
 
-        private readonly DnsEndPoint endPoint;
+        private readonly EndPoint endPoint;
         private readonly ISocketPoolConfiguration config;
         private InternalPoolImpl internalPoolImpl;
         private bool isInitialized;
 
         public MemcachedNode(
-            DnsEndPoint endpoint,
+            EndPoint endpoint,
             ISocketPoolConfiguration socketPoolConfig,
             ILogger logger)
         {
@@ -289,7 +289,7 @@ namespace Enyim.Caching.Memcached
                 var result = new PooledSocketResult();
                 var message = string.Empty;
 
-                if (_isDebugEnabled) _logger.LogDebug("Acquiring stream from pool. " + this.endPoint);
+                if (_isDebugEnabled) _logger.LogDebug("Acquiring stream from pool on node " + this.endPoint);
 
                 if (!this.isAlive || this.isDisposed)
                 {

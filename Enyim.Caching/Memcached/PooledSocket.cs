@@ -24,7 +24,7 @@ namespace Enyim.Caching.Memcached
         private Stream inputStream;
         private AsyncSocketHelper helper;
 
-        public PooledSocket(DnsEndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
+        public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
         {
             _logger = logger;
 
@@ -46,7 +46,7 @@ namespace Enyim.Caching.Memcached
 
             if (!ConnectWithTimeout(socket, endpoint, timeout))
             {
-                throw new TimeoutException($"Could not connect to {endpoint.Host}:{endpoint.Port}.");
+                throw new TimeoutException($"Could not connect to {endpoint}.");
             }
 
             this.socket = socket;
@@ -55,19 +55,21 @@ namespace Enyim.Caching.Memcached
             this.inputStream = new NetworkStream(socket);
         }
 
-        private bool ConnectWithTimeout(Socket socket, DnsEndPoint endpoint, int timeout)
+        private bool ConnectWithTimeout(Socket socket, EndPoint endpoint, int timeout)
         {
             bool connected = false;
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             var args = new SocketAsyncEventArgs();
 
             //Workaround for https://github.com/dotnet/corefx/issues/26840
-            if (!IPAddress.TryParse(endpoint.Host, out var address))
+            if (endpoint is DnsEndPoint)
             {
-                address = Dns.GetHostAddresses(endpoint.Host)
-                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+                var dnsEndPoint = (DnsEndPoint)endpoint;
+                var address = Dns.GetHostAddresses(dnsEndPoint.Host).FirstOrDefault(ip =>
+                    ip.AddressFamily == AddressFamily.InterNetwork);
                 if (address == null)
-                    throw new ArgumentException(String.Format("Could not resolve host '{0}'.", endpoint.Host));
+                    throw new ArgumentException(String.Format("Could not resolve host '{0}'.", endpoint));
+                endpoint = new IPEndPoint(address, dnsEndPoint.Port);
             }
 
             //Learn from https://github.com/dotnet/corefx/blob/release/2.2/src/System.Data.SqlClient/src/System/Data/SqlClient/SNI/SNITcpHandle.cs#L180
@@ -82,7 +84,7 @@ namespace Enyim.Caching.Memcached
             }
             cts.Token.Register(Cancel);
 
-            socket.Connect(address, endpoint.Port);
+            socket.Connect(endpoint);
             if (socket.Connected)
             {
                 connected = true;
