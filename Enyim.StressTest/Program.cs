@@ -30,8 +30,11 @@ namespace Enyim.StressTest
         {
             var host = new HostBuilder()
                 .ConfigureHostConfiguration(_ => _.AddJsonFile("appsettings.json", true))
-                .ConfigureLogging(_ => _.AddConsole())
-                .ConfigureServices(_ => _.AddEnyimMemcached())
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    logging.AddConsole();
+                }).ConfigureServices(_ => _.AddEnyimMemcached())
                 .Build();
 
             _memcachedClient = host.Services.GetRequiredService<IMemcachedClient>();
