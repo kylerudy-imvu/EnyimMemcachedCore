@@ -200,6 +200,7 @@ namespace Enyim.Caching
         {
             if (!CreateGetCommand<T>(key, out var result, out var node, out var command))
             {
+                _logger.LogInformation($"Failed to CreateGetCommand for '{key}' key");
                 return result;
             }
 
