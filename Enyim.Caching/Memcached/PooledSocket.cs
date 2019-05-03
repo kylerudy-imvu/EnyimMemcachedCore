@@ -255,7 +255,7 @@ namespace Enyim.Caching.Memcached
             {
                 try
                 {
-                    int currentRead = await this.inputStream.ReadAsync(buffer, offset, shouldRead);
+                    int currentRead = this.inputStream.Read(buffer, offset, shouldRead);
                     if (currentRead < 1)
                         continue;
 
