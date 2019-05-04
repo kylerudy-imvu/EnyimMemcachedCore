@@ -136,9 +136,9 @@ namespace Enyim.Caching.Memcached
                     this.internalPoolImpl.InitPool();
                     this.isInitialized = true;
                     _logger.LogInformation("MemcachedInitPool-cost: {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
-                    poolInitSemaphore.Release();
                 }
             }
+
             try
             {
                 return this.internalPoolImpl.Acquire();
@@ -150,6 +150,10 @@ namespace Enyim.Caching.Memcached
                 var result = new PooledSocketResult();
                 result.Fail(message, e);
                 return result;
+            }
+            finally
+            {
+                poolInitSemaphore.Release();
             }
         }
 
@@ -210,6 +214,7 @@ namespace Enyim.Caching.Memcached
 
                 this.isDisposed = true;
                 this.internalPoolImpl.Dispose();
+                this.poolInitSemaphore.Dispose();
             }
         }
 
