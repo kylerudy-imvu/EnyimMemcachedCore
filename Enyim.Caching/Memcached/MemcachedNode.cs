@@ -574,7 +574,8 @@ namespace Enyim.Caching.Memcached
             }
             else
             {
-                result.Fail("Failed to obtain socket from pool");
+                var errorMsg = string.IsNullOrEmpty(result.Message) ? "Failed to acquire a socket from pool" : result.Message;
+                _logger.LogError(errorMsg);
                 return result;
             }
 
@@ -622,7 +623,8 @@ namespace Enyim.Caching.Memcached
             }
             else
             {
-                result.Fail("Failed to obtain socket from pool");
+                var errorMsg = string.IsNullOrEmpty(result.Message) ? "Failed to acquire a socket from pool" : result.Message;
+                _logger.LogError(errorMsg);
                 return result;
             }
 
