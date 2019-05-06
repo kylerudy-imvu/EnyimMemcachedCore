@@ -702,7 +702,7 @@ namespace Enyim.Caching.Memcached
             try
             {
                 var ps = new PooledSocket(this.endPoint, this.config.ConnectionTimeout, this.config.ReceiveTimeout, _logger);
-                //ps.Connect();
+                ps.Connect();
                 return ps;
             }
             catch (Exception ex)
@@ -717,7 +717,7 @@ namespace Enyim.Caching.Memcached
             try
             {
                 var ps = new PooledSocket(this.endPoint, this.config.ConnectionTimeout, this.config.ReceiveTimeout, _logger);
-                //await ps.ConnectAsync();
+                await ps.ConnectAsync();
                 return ps;
             }
             catch (Exception ex)

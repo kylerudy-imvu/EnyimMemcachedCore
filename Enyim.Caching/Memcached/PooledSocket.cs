@@ -19,7 +19,8 @@ namespace Enyim.Caching.Memcached
 
         private bool _isAlive;
         private Socket _socket;
-        private EndPoint _endpoint;
+        private readonly EndPoint _endpoint;
+        private readonly int _connectionTimeout;
 
         private Stream _inputStream;
         private AsyncSocketHelper _helper;
@@ -27,13 +28,13 @@ namespace Enyim.Caching.Memcached
         public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
         {
             _logger = logger;
-
             _isAlive = true;
 
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             socket.NoDelay = true;
 
-            var timeout = connectionTimeout == TimeSpan.MaxValue
+            _connectionTimeout = connectionTimeout == TimeSpan.MaxValue
                 ? Timeout.Infinite
                 : (int)connectionTimeout.TotalMilliseconds;
 
@@ -44,45 +45,73 @@ namespace Enyim.Caching.Memcached
             socket.ReceiveTimeout = rcv;
             socket.SendTimeout = rcv;
 
-            if (!ConnectWithTimeout(socket, endpoint, timeout))
-            {
-                throw new TimeoutException($"Could not connect to {endpoint}.");
-            }
-
             _socket = socket;
             _endpoint = endpoint;
-
-            _inputStream = new NetworkStream(socket);
         }
 
-        private bool ConnectWithTimeout(Socket socket, EndPoint endpoint, int timeout)
+        public void Connect()
         {
-            bool connected = false;
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            bool success = false;
 
             //Learn from https://github.com/dotnet/corefx/blob/release/2.2/src/System.Data.SqlClient/src/System/Data/SqlClient/SNI/SNITcpHandle.cs#L180
             var cts = new CancellationTokenSource();
-            cts.CancelAfter(timeout);
+            cts.CancelAfter(_connectionTimeout);
             void Cancel()
             {
-                if (!socket.Connected)
+                if (!_socket.Connected)
                 {
-                    socket.Dispose();
+                    _socket.Dispose();
                 }
             }
             cts.Token.Register(Cancel);
 
-            socket.Connect(endpoint);
-            if (socket.Connected)
+            _socket.Connect(_endpoint);
+            if (_socket.Connected)
             {
-                connected = true;
+                success = true;
             }
             else
             {
-                socket.Dispose();
+                _socket.Dispose();
             }
 
-            return connected;
+            if (success)
+            {
+                _inputStream = new NetworkStream(_socket);
+            }
+            else
+            {
+                throw new TimeoutException($"Could not connect to {_endpoint}.");
+            }
+        }
+
+        public async Task ConnectAsync()
+        {
+            bool success = false;
+
+            var connTask = _socket.ConnectAsync(_endpoint);
+            if (await Task.WhenAny(connTask, Task.Delay(_connectionTimeout)) == connTask)
+            {
+                await connTask;
+            }
+
+            if (_socket.Connected)
+            {
+                success = true;
+            }
+            else
+            {
+                _socket.Dispose();
+            }
+
+            if (success)
+            {
+                _inputStream = new NetworkStream(_socket);
+            }
+            else
+            {
+                throw new TimeoutException($"Could not connect to {_endpoint}.");
+            }
         }
 
         public Action<PooledSocket> CleanupCallback { get; set; }
@@ -159,16 +188,14 @@ namespace Enyim.Caching.Memcached
                 try
                 {
                     if (_socket != null)
-                        try
-                        {
-                            _socket.Dispose();
-                        }
-                        catch
-                        {
-                        }
+                    {
+                        try { _socket.Dispose(); } catch { }
+                    }
 
                     if (_inputStream != null)
+                    {
                         _inputStream.Dispose();
+                    }
 
                     _inputStream = null;
                     _socket = null;
@@ -325,7 +352,7 @@ namespace Enyim.Caching.Memcached
             if (_socket.Send(buffers, SocketFlags.None, out status) != total)
                 System.Diagnostics.Debugger.Break();
 #else
-            this.socket.Send(buffers, SocketFlags.None, out status);
+            _socket.Send(buffers, SocketFlags.None, out status);
 #endif
 
             if (status != SocketError.Success)
