@@ -120,7 +120,7 @@ namespace Enyim.Caching.Memcached
             //could not reconnect
             catch { return false; }
         }
-        
+
         /// <summary>
         /// Acquires a new item from the pool
         /// </summary>
@@ -275,7 +275,7 @@ namespace Enyim.Caching.Memcached
                 _logger = logger;
                 _isDebugEnabled = _logger.IsEnabled(LogLevel.Debug);
             }
-            
+
             internal void InitPool()
             {
                 try
@@ -321,7 +321,7 @@ namespace Enyim.Caching.Memcached
                     }
 
                     if (_logger.IsEnabled(LogLevel.Debug))
-                        _logger.LogDebug("Pool has been inited for {0} with {1} sockets", this.endPoint, this.minItems);
+                        _logger.LogDebug("Pool has been inited for {0} with {1} sockets", _endPoint, this.minItems);
 
                 }
                 catch (Exception e)
@@ -356,7 +356,7 @@ namespace Enyim.Caching.Memcached
             {
                 get { return this.markedAsDeadUtc; }
             }
-            
+
             /// <summary>
             /// Acquires a new item from the pool
             /// </summary>
@@ -473,11 +473,11 @@ namespace Enyim.Caching.Memcached
                 var result = new PooledSocketResult();
                 var message = string.Empty;
 
-                if (_isDebugEnabled) _logger.LogDebug("Acquiring stream from pool. " + this.endPoint);
+                if (_isDebugEnabled) _logger.LogDebug("Acquiring stream from pool. " + _endPoint);
 
                 if (!this.isAlive || this.isDisposed)
                 {
-                    message = "Pool is dead or disposed, returning null. " + this.endPoint;
+                    message = "Pool is dead or disposed, returning null. " + _endPoint;
                     result.Fail(message);
 
                     if (_isDebugEnabled) _logger.LogDebug(message);
@@ -489,7 +489,7 @@ namespace Enyim.Caching.Memcached
 
                 if (!await this.semaphore.WaitAsync(this.queueTimeout))
                 {
-                    message = "Pool is full, timeouting. " + this.endPoint;
+                    message = "Pool is full, timeouting. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
                     result.Fail(message, new TimeoutException());
 
@@ -500,7 +500,7 @@ namespace Enyim.Caching.Memcached
                 // maybe we died while waiting
                 if (!this.isAlive)
                 {
-                    message = "Pool is dead, returning null. " + this.endPoint;
+                    message = "Pool is dead, returning null. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
                     result.Fail(message);
 
@@ -537,7 +537,7 @@ namespace Enyim.Caching.Memcached
                 }
 
                 // free item pool is empty
-                message = "Could not get a socket from the pool, Creating a new item. " + this.endPoint;
+                message = "Could not get a socket from the pool, Creating a new item. " + _endPoint;
                 if (_isDebugEnabled) _logger.LogDebug(message);
 
 
@@ -552,7 +552,7 @@ namespace Enyim.Caching.Memcached
                 }
                 catch (Exception e)
                 {
-                    message = "Failed to create socket. " + this.endPoint;
+                    message = "Failed to create socket. " + _endPoint;
                     _logger.LogError(message, e);
 
                     // eventhough this item failed the failure policy may keep the pool alive
@@ -702,7 +702,7 @@ namespace Enyim.Caching.Memcached
             try
             {
                 var ps = new PooledSocket(this.endPoint, this.config.ConnectionTimeout, this.config.ReceiveTimeout, _logger);
-                ps.Connect();
+                //ps.Connect();
                 return ps;
             }
             catch (Exception ex)
@@ -710,14 +710,14 @@ namespace Enyim.Caching.Memcached
                 _logger.LogError(ex, $"Create {nameof(PooledSocket)}");
                 throw;
             }
-            
+
         }
         protected internal virtual async Task<PooledSocket> CreateSocketAsync()
         {
             try
             {
                 var ps = new PooledSocket(this.endPoint, this.config.ConnectionTimeout, this.config.ReceiveTimeout, _logger);
-                await ps.ConnectAsync();
+                //await ps.ConnectAsync();
                 return ps;
             }
             catch (Exception ex)
