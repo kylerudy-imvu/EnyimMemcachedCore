@@ -130,12 +130,19 @@ namespace Enyim.Caching.Memcached
             if (!this.isInitialized)
             {
                 poolInitSemaphore.Wait();
-                if (!this.isInitialized)
+                try
                 {
-                    var startTime = DateTime.Now;
-                    this.internalPoolImpl.InitPool();
-                    this.isInitialized = true;
-                    _logger.LogInformation("MemcachedInitPool-cost: {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                    if (!this.isInitialized)
+                    {
+                        var startTime = DateTime.Now;
+                        this.internalPoolImpl.InitPool();
+                        this.isInitialized = true;
+                        _logger.LogInformation("MemcachedInitPool-cost: {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                    }
+                }
+                finally
+                {
+                    poolInitSemaphore.Release();
                 }
             }
 
@@ -151,10 +158,6 @@ namespace Enyim.Caching.Memcached
                 result.Fail(message, e);
                 return result;
             }
-            finally
-            {
-                poolInitSemaphore.Release();
-            }
         }
 
         /// <summary>
@@ -166,12 +169,18 @@ namespace Enyim.Caching.Memcached
             if (!this.isInitialized)
             {
                 await poolInitSemaphore.WaitAsync();
-                if (!this.isInitialized)
+                try
                 {
-                    var startTime = DateTime.Now;
-                    await this.internalPoolImpl.InitPoolAsync();
-                    this.isInitialized = true;
-                    _logger.LogInformation("MemcachedInitPool-cost: {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                    if (!this.isInitialized)
+                    {
+                        var startTime = DateTime.Now;
+                        await this.internalPoolImpl.InitPoolAsync();
+                        this.isInitialized = true;
+                        _logger.LogInformation("MemcachedInitPool-cost: {0}ms", (DateTime.Now - startTime).TotalMilliseconds);
+                    }
+                }
+                finally
+                {
                     poolInitSemaphore.Release();
                 }
             }
