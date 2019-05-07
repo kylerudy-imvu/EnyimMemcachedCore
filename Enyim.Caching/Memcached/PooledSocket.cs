@@ -296,7 +296,7 @@ namespace Enyim.Caching.Memcached
                 {
                     int currentRead = await _inputStream.ReadAsync(buffer, offset, shouldRead);
                     if (currentRead < 1)
-                        continue;
+                        break;
 
                     read += currentRead;
                     offset += currentRead;
@@ -334,7 +334,7 @@ namespace Enyim.Caching.Memcached
                 {
                     int currentRead = _inputStream.Read(buffer, offset, shouldRead);
                     if (currentRead < 1)
-                        continue;
+                        break;
 
                     read += currentRead;
                     offset += currentRead;
