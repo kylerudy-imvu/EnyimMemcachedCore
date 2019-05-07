@@ -184,6 +184,7 @@ namespace Enyim.Caching.Memcached
                     poolInitSemaphore.Release();
                 }
             }
+
             try
             {
                 return await this.internalPoolImpl.AcquireAsync();
@@ -441,7 +442,6 @@ namespace Enyim.Caching.Memcached
                 // free item pool is empty
                 message = "Could not get a socket from the pool, Creating a new item. " + _endPoint;
                 if (_isDebugEnabled) _logger.LogDebug(message);
-
 
                 try
                 {
@@ -805,7 +805,7 @@ namespace Enyim.Caching.Memcached
                     //if Get, call BinaryRequest.CreateBuffer()
                     var b = op.GetBuffer();
 
-                    await pooledSocket.WriteSync(b);
+                    await pooledSocket.WriteAsync(b);
 
                     //if Get, call BinaryResponse
                     var readResult = await op.ReadResponseAsync(pooledSocket);

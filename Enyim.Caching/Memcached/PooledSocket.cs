@@ -172,6 +172,7 @@ namespace Enyim.Caching.Memcached
         public bool IsAlive
         {
             get { return _isAlive; }
+            set { _isAlive = value; }
         }
 
         /// <summary>
@@ -359,35 +360,42 @@ namespace Enyim.Caching.Memcached
 
             SocketError status;
 
-#if DEBUG
-            int total = 0;
-            for (int i = 0, C = buffers.Count; i < C; i++)
-                total += buffers[i].Count;
-
-            if (_socket.Send(buffers, SocketFlags.None, out status) != total)
-                System.Diagnostics.Debugger.Break();
-#else
-            _socket.Send(buffers, SocketFlags.None, out status);
-#endif
-
-            if (status != SocketError.Success)
-            {
-                _isAlive = false;
-
-                ThrowHelper.ThrowSocketWriteError(_endpoint, status);
-            }
-        }
-
-        public async Task WriteSync(IList<ArraySegment<byte>> buffers)
-        {
             try
             {
-                await _socket.SendAsync(buffers, SocketFlags.None);
+                _socket.Send(buffers, SocketFlags.None, out status);
+                if (status != SocketError.Success)
+                {
+                    _isAlive = false;
+                    ThrowHelper.ThrowSocketWriteError(_endpoint, status);
+                }
             }
-            catch (Exception ex)
+            catch (IOException)
             {
                 _isAlive = false;
-                _logger.LogError(ex, nameof(PooledSocket.WriteSync));
+                throw;
+            }
+
+        }
+
+        public async Task WriteAsync(IList<ArraySegment<byte>> buffers)
+        {
+            CheckDisposed();
+
+            try
+            {
+                var bytesTransferred = await _socket.SendAsync(buffers, SocketFlags.None);
+                if (bytesTransferred <= 0)
+                {
+                    _isAlive = false;
+                    _logger.LogError($"Failed to {nameof(PooledSocket.WriteAsync)}. bytesTransferred: {bytesTransferred}");
+                    ThrowHelper.ThrowSocketWriteError(_endpoint);
+                }
+            }
+            catch (IOException ex)
+            {
+                _isAlive = false;
+                _logger.LogError(ex, nameof(PooledSocket.WriteAsync));
+                throw;
             }
         }
 
