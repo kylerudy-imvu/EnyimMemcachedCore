@@ -58,21 +58,27 @@ namespace Enyim.Caching.Memcached
             cts.CancelAfter(_connectionTimeout);
             void Cancel()
             {
-                if (!_socket.Connected)
+                if (_socket != null && !_socket.Connected)
                 {
                     _socket.Dispose();
+                    _socket = null;
                 }
             }
             cts.Token.Register(Cancel);
 
             _socket.Connect(_endpoint);
-            if (_socket.Connected)
+
+            if (_socket != null)
             {
-                success = true;
-            }
-            else
-            {
-                _socket.Dispose();
+                if (_socket.Connected)
+                {
+                    success = true;
+                }
+                else
+                {
+                    _socket.Dispose();
+                    _socket = null;
+                }
             }
 
             if (success)
@@ -94,14 +100,23 @@ namespace Enyim.Caching.Memcached
             {
                 await connTask;
             }
-
-            if (_socket.Connected)
-            {
-                success = true;
-            }
-            else
+            else if (_socket != null)
             {
                 _socket.Dispose();
+                _socket = null;
+            }
+
+            if (_socket != null)
+            {
+                if (_socket.Connected)
+                {
+                    success = true;
+                }
+                else
+                {
+                    _socket.Dispose();
+                    _socket = null;
+                }
             }
 
             if (success)
