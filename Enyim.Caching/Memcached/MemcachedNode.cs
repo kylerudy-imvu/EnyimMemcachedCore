@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security;
 using System.Threading;
@@ -184,6 +185,7 @@ namespace Enyim.Caching.Memcached
                     poolInitSemaphore.Release();
                 }
             }
+
             try
             {
                 return await this.internalPoolImpl.AcquireAsync();
@@ -441,7 +443,6 @@ namespace Enyim.Caching.Memcached
                 // free item pool is empty
                 message = "Could not get a socket from the pool, Creating a new item. " + _endPoint;
                 if (_isDebugEnabled) _logger.LogDebug(message);
-
 
                 try
                 {
@@ -805,9 +806,11 @@ namespace Enyim.Caching.Memcached
                     //if Get, call BinaryRequest.CreateBuffer()
                     var b = op.GetBuffer();
 
-                    await pooledSocket.WriteSync(b);
+                    _logger.LogDebug("pooledSocket.WriteAsync...");
+                    await pooledSocket.WriteAsync(b);
 
                     //if Get, call BinaryResponse
+                    _logger.LogDebug($"{op}.ReadResponseAsync...");
                     var readResult = await op.ReadResponseAsync(pooledSocket);
                     if (readResult.Success)
                     {
@@ -823,7 +826,14 @@ namespace Enyim.Caching.Memcached
                 {
                     _logger.LogError(nameof(MemcachedNode), e);
 
-                    result.Fail("Exception reading response", e);
+                    result.Fail("IOException reading response", e);
+                    return result;
+                }
+                catch (SocketException e)
+                {
+                    _logger.LogError(nameof(MemcachedNode), e);
+
+                    result.Fail("SocketException reading response", e);
                     return result;
                 }
                 finally

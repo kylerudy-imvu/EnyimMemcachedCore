@@ -172,6 +172,7 @@ namespace Enyim.Caching.Memcached
         public bool IsAlive
         {
             get { return _isAlive; }
+            set { _isAlive = value; }
         }
 
         /// <summary>
@@ -253,9 +254,12 @@ namespace Enyim.Caching.Memcached
             {
                 return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
 
                 throw;
             }
@@ -269,9 +273,12 @@ namespace Enyim.Caching.Memcached
             {
                 return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
                 throw;
             }
         }
@@ -295,9 +302,13 @@ namespace Enyim.Caching.Memcached
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    _isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
+
                     throw;
                 }
             }
@@ -329,9 +340,12 @@ namespace Enyim.Caching.Memcached
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    _isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
                     throw;
                 }
             }
@@ -359,35 +373,48 @@ namespace Enyim.Caching.Memcached
 
             SocketError status;
 
-#if DEBUG
-            int total = 0;
-            for (int i = 0, C = buffers.Count; i < C; i++)
-                total += buffers[i].Count;
-
-            if (_socket.Send(buffers, SocketFlags.None, out status) != total)
-                System.Diagnostics.Debugger.Break();
-#else
-            _socket.Send(buffers, SocketFlags.None, out status);
-#endif
-
-            if (status != SocketError.Success)
-            {
-                _isAlive = false;
-
-                ThrowHelper.ThrowSocketWriteError(_endpoint, status);
-            }
-        }
-
-        public async Task WriteSync(IList<ArraySegment<byte>> buffers)
-        {
             try
             {
-                await _socket.SendAsync(buffers, SocketFlags.None);
+                _socket.Send(buffers, SocketFlags.None, out status);
+                if (status != SocketError.Success)
+                {
+                    _isAlive = false;
+                    ThrowHelper.ThrowSocketWriteError(_endpoint, status);
+                }
             }
             catch (Exception ex)
             {
-                _isAlive = false;
-                _logger.LogError(ex, nameof(PooledSocket.WriteSync));
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
+                _logger.LogError(ex, nameof(PooledSocket.Write));
+                throw;
+            }
+        }
+
+        public async Task WriteAsync(IList<ArraySegment<byte>> buffers)
+        {
+            CheckDisposed();
+
+            try
+            {
+                var bytesTransferred = await _socket.SendAsync(buffers, SocketFlags.None);
+                if (bytesTransferred <= 0)
+                {
+                    _isAlive = false;
+                    _logger.LogError($"Failed to {nameof(PooledSocket.WriteAsync)}. bytesTransferred: {bytesTransferred}");
+                    ThrowHelper.ThrowSocketWriteError(_endpoint);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
+                _logger.LogError(ex, nameof(PooledSocket.WriteAsync));
+                throw;
             }
         }
 
