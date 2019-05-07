@@ -254,9 +254,12 @@ namespace Enyim.Caching.Memcached
             {
                 return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
 
                 throw;
             }
@@ -270,9 +273,12 @@ namespace Enyim.Caching.Memcached
             {
                 return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
                 throw;
             }
         }
@@ -296,9 +302,13 @@ namespace Enyim.Caching.Memcached
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    _isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
+
                     throw;
                 }
             }
@@ -330,9 +340,12 @@ namespace Enyim.Caching.Memcached
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    _isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
                     throw;
                 }
             }
@@ -369,9 +382,13 @@ namespace Enyim.Caching.Memcached
                     ThrowHelper.ThrowSocketWriteError(_endpoint, status);
                 }
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
+                _logger.LogError(ex, nameof(PooledSocket.Write));
                 throw;
             }
         }
@@ -390,9 +407,12 @@ namespace Enyim.Caching.Memcached
                     ThrowHelper.ThrowSocketWriteError(_endpoint);
                 }
             }
-            catch (IOException ex)
+            catch (Exception ex)
             {
-                _isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
                 _logger.LogError(ex, nameof(PooledSocket.WriteAsync));
                 throw;
             }

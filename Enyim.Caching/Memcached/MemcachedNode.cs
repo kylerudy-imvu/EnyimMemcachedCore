@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security;
 using System.Threading;
@@ -825,7 +826,14 @@ namespace Enyim.Caching.Memcached
                 {
                     _logger.LogError(nameof(MemcachedNode), e);
 
-                    result.Fail("Exception reading response", e);
+                    result.Fail("IOException reading response", e);
+                    return result;
+                }
+                catch (SocketException e)
+                {
+                    _logger.LogError(nameof(MemcachedNode), e);
+
+                    result.Fail("SocketException reading response", e);
                     return result;
                 }
                 finally
