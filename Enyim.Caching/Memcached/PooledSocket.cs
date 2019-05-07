@@ -374,7 +374,6 @@ namespace Enyim.Caching.Memcached
                 _isAlive = false;
                 throw;
             }
-
         }
 
         public async Task WriteAsync(IList<ArraySegment<byte>> buffers)
