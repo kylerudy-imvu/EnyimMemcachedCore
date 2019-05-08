@@ -31,8 +31,9 @@ namespace Enyim.Caching.Memcached
         private readonly EndPoint endPoint;
         private readonly ISocketPoolConfiguration config;
         private InternalPoolImpl internalPoolImpl;
-        private bool isInitialized;
+        private bool isInitialized = false;
         private SemaphoreSlim poolInitSemaphore = new SemaphoreSlim(1, 1);
+        private readonly TimeSpan _initPoolTimeout;
 
         public MemcachedNode(
             EndPoint endpoint,
@@ -44,6 +45,15 @@ namespace Enyim.Caching.Memcached
 
             if (socketPoolConfig.ConnectionTimeout.TotalMilliseconds >= Int32.MaxValue)
                 throw new InvalidOperationException("ConnectionTimeout must be < Int32.MaxValue");
+
+            if (socketPoolConfig.InitPoolTimeout.TotalSeconds < 1)
+            {
+                _initPoolTimeout = new TimeSpan(0, 1, 0);
+            }
+            else
+            {
+                _initPoolTimeout = socketPoolConfig.InitPoolTimeout;
+            }
 
             _logger = logger;
             this.internalPoolImpl = new InternalPoolImpl(this, socketPoolConfig, _logger);
@@ -128,9 +138,14 @@ namespace Enyim.Caching.Memcached
         /// <returns>An <see cref="T:PooledSocket"/> instance which is connected to the memcached server, or <value>null</value> if the pool is dead.</returns>
         public IPooledSocketResult Acquire()
         {
+            var result = new PooledSocketResult();
             if (!this.isInitialized)
             {
-                poolInitSemaphore.Wait();
+                if (!poolInitSemaphore.Wait(_initPoolTimeout))
+                {
+                    return result.Fail("Timeout to poolInitSemaphore.Wait", _logger) as PooledSocketResult;
+                }
+
                 try
                 {
                     if (!this.isInitialized)
@@ -155,7 +170,7 @@ namespace Enyim.Caching.Memcached
             {
                 var message = "Acquire failed. Maybe we're already disposed?";
                 _logger.LogError(message, e);
-                var result = new PooledSocketResult();
+
                 result.Fail(message, e);
                 return result;
             }
@@ -167,9 +182,14 @@ namespace Enyim.Caching.Memcached
         /// <returns>An <see cref="T:PooledSocket"/> instance which is connected to the memcached server, or <value>null</value> if the pool is dead.</returns>
         public async Task<IPooledSocketResult> AcquireAsync()
         {
+            var result = new PooledSocketResult();
             if (!this.isInitialized)
             {
-                await poolInitSemaphore.WaitAsync();
+                if (!await poolInitSemaphore.WaitAsync(_initPoolTimeout))
+                {
+                    return result.Fail("Timeout to poolInitSemaphore.Wait", _logger) as PooledSocketResult;
+                }
+
                 try
                 {
                     if (!this.isInitialized)
@@ -194,7 +214,6 @@ namespace Enyim.Caching.Memcached
             {
                 var message = "Acquire failed. Maybe we're already disposed?";
                 _logger.LogError(message, e);
-                var result = new PooledSocketResult();
                 result.Fail(message, e);
                 return result;
             }
