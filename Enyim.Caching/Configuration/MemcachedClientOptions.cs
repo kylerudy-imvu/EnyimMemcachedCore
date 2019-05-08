@@ -62,8 +62,8 @@ namespace Enyim.Caching.Configuration
 
     public class SocketPoolOptions
     {
-        public int MinPoolSize { get; set; } = 10;
-        public int MaxPoolSize { get; set; } = 20;
+        public int MinPoolSize { get; set; } = 5;
+        public int MaxPoolSize { get; set; } = 100;
         public TimeSpan ConnectionTimeout { get; set; } = new TimeSpan(0, 0, 10);
         public TimeSpan ReceiveTimeout { get; set; } = new TimeSpan(0, 0, 10);
         public TimeSpan DeadTimeout { get; set; } = new TimeSpan(0, 0, 10);

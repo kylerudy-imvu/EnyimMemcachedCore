@@ -8,8 +8,8 @@ namespace Enyim.Caching.Configuration
 {
     public class SocketPoolConfiguration : ISocketPoolConfiguration
     {
-        private int minPoolSize = 10;
-        private int maxPoolSize = 20;
+        private int minPoolSize = 5;
+        private int maxPoolSize = 100;
         private TimeSpan connectionTimeout = new TimeSpan(0, 0, 10);
         private TimeSpan receiveTimeout = new TimeSpan(0, 0, 10);
         private TimeSpan deadTimeout = new TimeSpan(0, 0, 10);
