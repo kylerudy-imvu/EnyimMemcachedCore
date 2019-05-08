@@ -647,7 +647,10 @@ namespace Enyim.Caching.Memcached
                         finally
                         {
                             // signal the event so if someone is waiting for it can reuse this item
-                            this.semaphore.Release();
+                            if (this.semaphore != null)
+                            {
+                                this.semaphore.Release();
+                            }
                         }
                     }
                     else
@@ -664,7 +667,10 @@ namespace Enyim.Caching.Memcached
                         {
                             // make sure to signal the Acquire so it can create a new conenction
                             // if the failure policy keeps the pool alive
-                            this.semaphore.Release();
+                            if (this.semaphore != null)
+                            {
+                                this.semaphore.Release();
+                            }
                         }
                     }
                 }
@@ -678,7 +684,10 @@ namespace Enyim.Caching.Memcached
                     }
                     finally
                     {
-                        this.semaphore.Release();
+                        if (this.semaphore != null)
+                        {
+                            this.semaphore.Release();
+                        }
                     }
                 }
             }
