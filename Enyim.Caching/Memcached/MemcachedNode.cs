@@ -275,7 +275,7 @@ namespace Enyim.Caching.Memcached
             private MemcachedNode ownerNode;
             private readonly EndPoint _endPoint;
             private readonly TimeSpan queueTimeout;
-            private SemaphoreSlim semaphore;
+            private SemaphoreSlim _semaphore;
 
             private readonly object initLock = new Object();
 
@@ -299,7 +299,7 @@ namespace Enyim.Caching.Memcached
                 this.minItems = config.MinPoolSize;
                 this.maxItems = config.MaxPoolSize;
 
-                this.semaphore = new SemaphoreSlim(maxItems, maxItems);
+                _semaphore = new SemaphoreSlim(maxItems, maxItems);
                 this.freeItems = new InterlockedStack<PooledSocket>();
 
                 _logger = logger;
@@ -410,7 +410,7 @@ namespace Enyim.Caching.Memcached
 
                 PooledSocket retval = null;
 
-                if (!this.semaphore.Wait(this.queueTimeout))
+                if (!_semaphore.Wait(this.queueTimeout))
                 {
                     message = "Pool is full, timeouting. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
@@ -481,7 +481,7 @@ namespace Enyim.Caching.Memcached
                     // so we need to make sure to release the semaphore, so new connections can be
                     // acquired or created (otherwise dead conenctions would "fill up" the pool
                     // while the FP pretends that the pool is healthy)
-                    semaphore.Release();
+                    _semaphore.Release();
 
                     this.MarkAsDead();
                     result.Fail(message);
@@ -516,7 +516,7 @@ namespace Enyim.Caching.Memcached
 
                 PooledSocket retval = null;
 
-                if (!await this.semaphore.WaitAsync(this.queueTimeout))
+                if (!await _semaphore.WaitAsync(this.queueTimeout))
                 {
                     message = "Pool is full, timeouting. " + _endPoint;
                     if (_isDebugEnabled) _logger.LogDebug(message);
@@ -588,7 +588,7 @@ namespace Enyim.Caching.Memcached
                     // so we need to make sure to release the semaphore, so new connections can be
                     // acquired or created (otherwise dead conenctions would "fill up" the pool
                     // while the FP pretends that the pool is healthy)
-                    semaphore.Release();
+                    _semaphore.Release();
 
                     this.MarkAsDead();
                     result.Fail(message);
@@ -647,9 +647,9 @@ namespace Enyim.Caching.Memcached
                         finally
                         {
                             // signal the event so if someone is waiting for it can reuse this item
-                            if (this.semaphore != null)
+                            if (_semaphore != null)
                             {
-                                this.semaphore.Release();
+                                _semaphore.Release();
                             }
                         }
                     }
@@ -667,9 +667,9 @@ namespace Enyim.Caching.Memcached
                         {
                             // make sure to signal the Acquire so it can create a new conenction
                             // if the failure policy keeps the pool alive
-                            if (this.semaphore != null)
+                            if (_semaphore != null)
                             {
-                                this.semaphore.Release();
+                                _semaphore.Release();
                             }
                         }
                     }
@@ -684,9 +684,9 @@ namespace Enyim.Caching.Memcached
                     }
                     finally
                     {
-                        if (this.semaphore != null)
+                        if (_semaphore != null)
                         {
-                            this.semaphore.Release();
+                            _semaphore.Release();
                         }
                     }
                 }
@@ -722,8 +722,8 @@ namespace Enyim.Caching.Memcached
                     }
 
                     this.ownerNode = null;
-                    this.semaphore.Dispose();
-                    this.semaphore = null;
+                    _semaphore.Dispose();
+                    _semaphore = null;
                     this.freeItems = null;
                 }
             }
