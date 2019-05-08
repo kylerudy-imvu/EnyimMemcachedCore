@@ -22,7 +22,7 @@ namespace Enyim.StressTest
     class Program
     {
         private static IMemcachedClient _memcachedClient;
-        private static int _runTimes = 100000;
+        private static int _requestTimes = 10000;
         private static readonly string _cacheKey = "enyim-stress-test";
         private static ILogger _logger;
 
@@ -39,9 +39,9 @@ namespace Enyim.StressTest
 
             _memcachedClient = host.Services.GetRequiredService<IMemcachedClient>();
             _logger = host.Services.GetRequiredService<ILogger<Program>>();
-            var runTimes = host.Services.GetRequiredService<IConfiguration>().GetValue<int?>("RunTimes");
-            _runTimes = runTimes.HasValue ? runTimes.Value : _runTimes;
-
+            var requestTimes = host.Services.GetRequiredService<IConfiguration>().GetValue<int?>("requestTimes");
+            _requestTimes = requestTimes.HasValue ? requestTimes.Value : _requestTimes;
+            Console.WriteLine($"Request Times: {_requestTimes}");
             await Run();
         }
 
@@ -54,7 +54,6 @@ namespace Enyim.StressTest
 
         static async Task RunSync(int cnt)
         {
-            Console.WriteLine("Use Get");
             await TrySingle();
             var sw = Stopwatch.StartNew();
             var errCnt = 0;
@@ -80,14 +79,14 @@ namespace Enyim.StressTest
 
             Thread.Sleep(TimeSpan.FromSeconds(3));
             await TrySingle();
+            Console.WriteLine("Use Get");
             Console.WriteLine($"Time: {sw.ElapsedMilliseconds}ms");
-            Console.WriteLine($"Error Cnt: {errCnt}");
+            Console.WriteLine($"Failures: {errCnt}");
             Console.WriteLine($"Avg: {Convert.ToDouble(sw.ElapsedMilliseconds) / Convert.ToDouble(cnt)}ms");
         }
 
         static async Task RunAsync(int cnt)
         {
-            Console.WriteLine("Use GetValueAsync");
             await TrySingle();
             var sw = Stopwatch.StartNew();
             var obj = new object();
@@ -114,14 +113,15 @@ namespace Enyim.StressTest
             sw.Stop();
             Thread.Sleep(TimeSpan.FromSeconds(3));
             await TrySingle();
+            Console.WriteLine("Use GetValueAsync");
             Console.WriteLine($"Time: {sw.ElapsedMilliseconds}ms");
-            Console.WriteLine($"Error Cnt: {errCnt}");
+            Console.WriteLine($"Failures: {errCnt}");
             Console.WriteLine($"Avg: {Convert.ToDouble(sw.ElapsedMilliseconds) / Convert.ToDouble(cnt)}ms");
         }
 
         static async Task Run()
         {
-            var cnt = _runTimes;
+            var cnt = _requestTimes;
             await RunAsync(cnt);
             //await RunSync(cnt);
         }
