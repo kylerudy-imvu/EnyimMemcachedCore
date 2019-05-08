@@ -639,30 +639,47 @@ namespace Enyim.Caching.Memcached
                     // is it still working (i.e. the server is still connected)
                     if (socket.IsAlive)
                     {
-                        // mark the item as free
-                        this.freeItems.Push(socket);
-
-                        // signal the event so if someone is waiting for it can reuse this item
-                        this.semaphore.Release();
+                        try
+                        {
+                            // mark the item as free
+                            this.freeItems.Push(socket);
+                        }
+                        finally
+                        {
+                            // signal the event so if someone is waiting for it can reuse this item
+                            this.semaphore.Release();
+                        }
                     }
                     else
                     {
-                        // kill this item
-                        socket.Destroy();
+                        try
+                        {
+                            // kill this item
+                            socket.Destroy();
 
-                        // mark ourselves as not working for a while
-                        this.MarkAsDead();
-
-                        // make sure to signal the Acquire so it can create a new conenction
-                        // if the failure policy keeps the pool alive
-                        this.semaphore.Release();
+                            // mark ourselves as not working for a while
+                            this.MarkAsDead();
+                        }
+                        finally
+                        {
+                            // make sure to signal the Acquire so it can create a new conenction
+                            // if the failure policy keeps the pool alive
+                            this.semaphore.Release();
+                        }
                     }
                 }
                 else
                 {
-                    // one of our previous sockets has died, so probably all of them 
-                    // are dead. so, kill the socket (this will eventually clear the pool as well)
-                    socket.Destroy();
+                    try
+                    {
+                        // one of our previous sockets has died, so probably all of them 
+                        // are dead. so, kill the socket (this will eventually clear the pool as well)
+                        socket.Destroy();
+                    }
+                    finally
+                    {
+                        this.semaphore.Release();
+                    }
                 }
             }
 
