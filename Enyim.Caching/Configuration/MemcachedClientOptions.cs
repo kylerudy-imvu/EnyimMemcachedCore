@@ -30,7 +30,7 @@ namespace Enyim.Caching.Configuration
             Servers.Add(new Server { Address = address, Port = port });
         }
 
-        public void AddDefaultServer() => AddServer("memcached", 11211);    
+        public void AddDefaultServer() => AddServer("memcached", 11211);
 
         public void AddPlainTextAuthenticator(string zone, string userName, string password)
         {
@@ -62,12 +62,13 @@ namespace Enyim.Caching.Configuration
 
     public class SocketPoolOptions
     {
-        public int MinPoolSize { get; set; } = 10;
-        public int MaxPoolSize { get; set; } = 20;
+        public int MinPoolSize { get; set; } = 5;
+        public int MaxPoolSize { get; set; } = 100;
         public TimeSpan ConnectionTimeout { get; set; } = new TimeSpan(0, 0, 10);
         public TimeSpan ReceiveTimeout { get; set; } = new TimeSpan(0, 0, 10);
         public TimeSpan DeadTimeout { get; set; } = new TimeSpan(0, 0, 10);
         public TimeSpan QueueTimeout { get; set; } = new TimeSpan(0, 0, 0, 0, 100);
+        public TimeSpan InitPoolTimeout { get; set; } = new TimeSpan(0, 1, 0);
 
         public void CheckPoolSize()
         {
