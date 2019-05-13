@@ -22,7 +22,7 @@ namespace Enyim.Caching.Memcached
         private readonly EndPoint _endpoint;
         private readonly int _connectionTimeout;
 
-        private Stream _inputStream;
+        private NetworkStream _inputStream;
         private AsyncSocketHelper _helper;
 
         public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
