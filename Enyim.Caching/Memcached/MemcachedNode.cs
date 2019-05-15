@@ -961,9 +961,9 @@ namespace Enyim.Caching.Memcached
             return await this.ExecuteOperationAsync(op);
         }
 
-        bool IMemcachedNode.ExecuteAsync(IOperation op, Action<bool> next)
+        async Task<bool> IMemcachedNode.ExecuteAsync(IOperation op, Action<bool> next)
         {
-            return this.ExecuteOperationAsync(op, next).Result;
+            return await ExecuteOperationAsync(op, next);
         }
 
         event Action<IMemcachedNode> IMemcachedNode.Failed
