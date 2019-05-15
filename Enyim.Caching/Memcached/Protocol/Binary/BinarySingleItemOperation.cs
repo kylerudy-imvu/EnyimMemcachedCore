@@ -69,7 +69,7 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
             return result;
         }
 
-        protected internal override bool ReadResponseAsync(PooledSocket socket, Action<bool> next)
+        protected internal override Task<bool> ReadResponseAsync(PooledSocket socket, Action<bool> next)
         {
             throw new NotImplementedException();
         }

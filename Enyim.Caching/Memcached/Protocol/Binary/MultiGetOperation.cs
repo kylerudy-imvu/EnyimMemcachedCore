@@ -70,65 +70,17 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
         }
 
 
-        private PooledSocket currentSocket;
-        private BinaryResponse asyncReader;
-        private bool? asyncLoopState;
-        private Action<bool> afterAsyncRead;
+        private readonly PooledSocket currentSocket;
+        private readonly BinaryResponse asyncReader;
+        private readonly bool? asyncLoopState;
+        private readonly Action<bool> afterAsyncRead;
 
-        protected internal override ValueTask<IOperationResult> ReadResponseAsync(PooledSocket socket)
+
+        protected internal override async Task<bool> ReadResponseAsync(PooledSocket socket, Action<bool> next)
         {
-            return new ValueTask<IOperationResult>(ReadResponse(socket));
-        }
-
-        protected internal override bool ReadResponseAsync(PooledSocket socket, Action<bool> next)
-        {
-            this.result = new Dictionary<string, CacheItem>();
-            this.Cas = new Dictionary<string, ulong>();
-
-            this.currentSocket = socket;
-            this.asyncReader = new BinaryResponse();
-            this.asyncLoopState = null;
-            this.afterAsyncRead = next;
-
-            return this.DoReadAsync();
-        }
-
-        private bool DoReadAsync()
-        {
-            bool ioPending;
-
-            var reader = this.asyncReader;
-
-            while (this.asyncLoopState == null)
-            {
-                var readSuccess = reader.ReadAsync(this.currentSocket, this.EndReadAsync, out ioPending);
-                this.StatusCode = reader.StatusCode;
-
-                if (ioPending) return readSuccess;
-
-                if (!readSuccess)
-                    this.asyncLoopState = false;
-                else if (reader.CorrelationId == this.noopId)
-                    this.asyncLoopState = true;
-                else
-                    this.StoreResult(reader);
-            }
-
-            this.afterAsyncRead((bool)this.asyncLoopState);
-
-            return true;
-        }
-
-        private void EndReadAsync(bool readSuccess)
-        {
-            if (!readSuccess)
-                this.asyncLoopState = false;
-            else if (this.asyncReader.CorrelationId == this.noopId)
-                this.asyncLoopState = true;
-            else
-                StoreResult(this.asyncReader);
-
-            this.DoReadAsync();
+            var result = await ReadResponseAsync(socket);
+            next(result.Success);
+            return result.Success;
         }
 
         private void StoreResult(BinaryResponse reader)
@@ -162,6 +114,45 @@ namespace Enyim.Caching.Memcached.Protocol.Binary
             var response = new BinaryResponse();
 
             while (response.Read(socket))
+            {
+                this.StatusCode = response.StatusCode;
+
+                // found the noop, quit
+                if (response.CorrelationId == this.noopId)
+                    return result.Pass();
+
+                string key;
+
+                // find the key to the response
+                if (!this.idToKey.TryGetValue(response.CorrelationId, out key))
+                {
+                    // we're not supposed to get here tho
+                    log.WarnFormat("Found response with CorrelationId {0}, but no key is matching it.", response.CorrelationId);
+                    continue;
+                }
+
+                if (log.IsDebugEnabled) log.DebugFormat("Reading item {0}", key);
+
+                // deserialize the response
+                int flags = BinaryConverter.DecodeInt32(response.Extra, 0);
+
+                this.result[key] = new CacheItem((ushort)flags, response.Data);
+                this.Cas[key] = response.CAS;
+            }
+
+            // finished reading but we did not find the NOOP
+            return result.Fail("Found response with CorrelationId {0}, but no key is matching it.");
+        }
+
+        protected internal override async ValueTask<IOperationResult> ReadResponseAsync(PooledSocket socket)
+        {
+            this.result = new Dictionary<string, CacheItem>();
+            this.Cas = new Dictionary<string, ulong>();
+            var result = new TextOperationResult();
+
+            var response = new BinaryResponse();
+
+            while (await response.ReadAsync(socket))
             {
                 this.StatusCode = response.StatusCode;
 

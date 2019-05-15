@@ -905,9 +905,9 @@ namespace Enyim.Caching.Memcached
 
             try
             {
-                socket.Write(b);
+                await socket.WriteAsync(b);
 
-                var rrs = op.ReadResponseAsync(socket, readSuccess =>
+                var rrs = await op.ReadResponseAsync(socket, readSuccess =>
                 {
                     ((IDisposable)socket).Dispose();
 

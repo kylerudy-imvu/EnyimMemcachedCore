@@ -23,7 +23,6 @@ namespace Enyim.Caching.Memcached
         private readonly int _connectionTimeout;
 
         private NetworkStream _inputStream;
-        private AsyncSocketHelper _helper;
 
         public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
         {
@@ -140,8 +139,6 @@ namespace Enyim.Caching.Memcached
         {
             // discard any buffered data
             _inputStream.Flush();
-
-            if (_helper != null) _helper.DiscardBuffer();
 
             int available = _socket.Available;
 
@@ -416,28 +413,6 @@ namespace Enyim.Caching.Memcached
                 _logger.LogError(ex, nameof(PooledSocket.WriteAsync));
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Receives data asynchronously. Returns true if the IO is pending. Returns false if the socket already failed or the data was available in the buffer.
-        /// p.Next will only be called if the call completes asynchronously.
-        /// </summary>
-        public bool ReceiveAsync(AsyncIOArgs p)
-        {
-            this.CheckDisposed();
-
-            if (!this.IsAlive)
-            {
-                p.Fail = true;
-                p.Result = null;
-
-                return false;
-            }
-
-            if (_helper == null)
-                _helper = new AsyncSocketHelper(this);
-
-            return _helper.Read(p);
         }
     }
 }
