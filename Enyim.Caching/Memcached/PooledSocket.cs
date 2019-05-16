@@ -292,8 +292,10 @@ namespace Enyim.Caching.Memcached
                 try
                 {
                     int currentRead = await _inputStream.ReadAsync(buffer, offset, shouldRead);
-                    if (currentRead == count || currentRead < 1)
+                    if (currentRead == count)
                         break;
+                    if (currentRead < 1)
+                        throw new IOException("The socket seems to be disconnected");
 
                     read += currentRead;
                     offset += currentRead;
@@ -330,8 +332,10 @@ namespace Enyim.Caching.Memcached
                 try
                 {
                     int currentRead = _inputStream.Read(buffer, offset, shouldRead);
-                    if (currentRead == count || currentRead < 1)
+                    if (currentRead == count)
                         break;
+                    if (currentRead < 1)
+                        throw new IOException("The socket seems to be disconnected");
 
                     read += currentRead;
                     offset += currentRead;
