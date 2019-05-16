@@ -17,23 +17,23 @@ namespace Enyim.Caching.Memcached
     {
         private readonly ILogger _logger;
 
-        private bool isAlive;
-        private Socket socket;
-        private EndPoint endpoint;
+        private bool _isAlive;
+        private Socket _socket;
+        private readonly EndPoint _endpoint;
+        private readonly int _connectionTimeout;
 
-        private Stream inputStream;
-        private AsyncSocketHelper helper;
+        private NetworkStream _inputStream;
 
-        public PooledSocket(DnsEndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
+        public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
         {
             _logger = logger;
-
-            this.isAlive = true;
+            _isAlive = true;
 
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
             socket.NoDelay = true;
 
-            var timeout = connectionTimeout == TimeSpan.MaxValue
+            _connectionTimeout = connectionTimeout == TimeSpan.MaxValue
                 ? Timeout.Infinite
                 : (int)connectionTimeout.TotalMilliseconds;
 
@@ -44,79 +44,110 @@ namespace Enyim.Caching.Memcached
             socket.ReceiveTimeout = rcv;
             socket.SendTimeout = rcv;
 
-            if (!ConnectWithTimeout(socket, endpoint, timeout))
-            {
-                throw new TimeoutException($"Could not connect to {endpoint.Host}:{endpoint.Port}.");
-            }
-
-            this.socket = socket;
-            this.endpoint = endpoint;
-
-            this.inputStream = new NetworkStream(socket);
+            _socket = socket;
+            _endpoint = endpoint;
         }
 
-        private bool ConnectWithTimeout(Socket socket, DnsEndPoint endpoint, int timeout)
+        public void Connect()
         {
-            bool connected = false;
-            socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-            var args = new SocketAsyncEventArgs();
-
-            //Workaround for https://github.com/dotnet/corefx/issues/26840
-            if (!IPAddress.TryParse(endpoint.Host, out var address))
-            {
-                address = Dns.GetHostAddresses(endpoint.Host)
-                    .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-                if (address == null)
-                    throw new ArgumentException(String.Format("Could not resolve host '{0}'.", endpoint.Host));
-            }
+            bool success = false;
 
             //Learn from https://github.com/dotnet/corefx/blob/release/2.2/src/System.Data.SqlClient/src/System/Data/SqlClient/SNI/SNITcpHandle.cs#L180
             var cts = new CancellationTokenSource();
-            cts.CancelAfter(timeout);
+            cts.CancelAfter(_connectionTimeout);
             void Cancel()
             {
-                if (!socket.Connected)
+                if (_socket != null && !_socket.Connected)
                 {
-                    socket.Dispose();
+                    _socket.Dispose();
+                    _socket = null;
                 }
             }
             cts.Token.Register(Cancel);
 
-            socket.Connect(address, endpoint.Port);
-            if (socket.Connected)
+            _socket.Connect(_endpoint);
+
+            if (_socket != null)
             {
-                connected = true;
+                if (_socket.Connected)
+                {
+                    success = true;
+                }
+                else
+                {
+                    _socket.Dispose();
+                    _socket = null;
+                }
+            }
+
+            if (success)
+            {
+                _inputStream = new NetworkStream(_socket);
             }
             else
             {
-                socket.Dispose();
+                throw new TimeoutException($"Could not connect to {_endpoint}.");
+            }
+        }
+
+        public async Task ConnectAsync()
+        {
+            bool success = false;
+
+            var connTask = _socket.ConnectAsync(_endpoint);
+            if (await Task.WhenAny(connTask, Task.Delay(_connectionTimeout)) == connTask)
+            {
+                await connTask;
+            }
+            else if (_socket != null)
+            {
+                _socket.Dispose();
+                _socket = null;
             }
 
-            return connected;
+            if (_socket != null)
+            {
+                if (_socket.Connected)
+                {
+                    success = true;
+                }
+                else
+                {
+                    _socket.Dispose();
+                    _socket = null;
+                }
+            }
+
+            if (success)
+            {
+                _inputStream = new NetworkStream(_socket);
+            }
+            else
+            {
+                throw new TimeoutException($"Could not connect to {_endpoint}.");
+            }
         }
 
         public Action<PooledSocket> CleanupCallback { get; set; }
 
         public int Available
         {
-            get { return this.socket.Available; }
+            get { return _socket.Available; }
         }
 
         public void Reset()
         {
             // discard any buffered data
-            this.inputStream.Flush();
+            _inputStream.Flush();
 
-            if (this.helper != null) this.helper.DiscardBuffer();
-
-            int available = this.socket.Available;
+            int available = _socket.Available;
 
             if (available > 0)
             {
                 if (_logger.IsEnabled(LogLevel.Warning))
                     _logger.LogWarning(
                         "Socket bound to {0} has {1} unread data! This is probably a bug in the code. InstanceID was {2}.",
-                        this.socket.RemoteEndPoint, available, this.InstanceId);
+                        _socket.RemoteEndPoint, available, this.InstanceId);
 
                 byte[] data = new byte[available];
 
@@ -137,7 +168,8 @@ namespace Enyim.Caching.Memcached
 
         public bool IsAlive
         {
-            get { return this.isAlive; }
+            get { return _isAlive; }
+            set { _isAlive = value; }
         }
 
         /// <summary>
@@ -168,20 +200,18 @@ namespace Enyim.Caching.Memcached
 
                 try
                 {
-                    if (socket != null)
-                        try
-                        {
-                            this.socket.Dispose();
-                        }
-                        catch
-                        {
-                        }
+                    if (_socket != null)
+                    {
+                        try { _socket.Dispose(); } catch { }
+                    }
 
-                    if (this.inputStream != null)
-                        this.inputStream.Dispose();
+                    if (_inputStream != null)
+                    {
+                        _inputStream.Dispose();
+                    }
 
-                    this.inputStream = null;
-                    this.socket = null;
+                    _inputStream = null;
+                    _socket = null;
                     this.CleanupCallback = null;
                 }
                 catch (Exception e)
@@ -205,7 +235,7 @@ namespace Enyim.Caching.Memcached
 
         private void CheckDisposed()
         {
-            if (this.socket == null)
+            if (_socket == null)
                 throw new ObjectDisposedException("PooledSocket");
         }
 
@@ -219,11 +249,14 @@ namespace Enyim.Caching.Memcached
 
             try
             {
-                return this.inputStream.ReadByte();
+                return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                this.isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
 
                 throw;
             }
@@ -235,11 +268,14 @@ namespace Enyim.Caching.Memcached
 
             try
             {
-                return this.inputStream.ReadByte();
+                return _inputStream.ReadByte();
             }
-            catch (IOException)
+            catch (Exception ex)
             {
-                this.isAlive = false;
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
                 throw;
             }
         }
@@ -255,17 +291,23 @@ namespace Enyim.Caching.Memcached
             {
                 try
                 {
-                    int currentRead = this.inputStream.Read(buffer, offset, shouldRead);
+                    int currentRead = await _inputStream.ReadAsync(buffer, offset, shouldRead);
+                    if (currentRead == count)
+                        break;
                     if (currentRead < 1)
-                        continue;
+                        throw new IOException("The socket seems to be disconnected");
 
                     read += currentRead;
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    this.isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
+
                     throw;
                 }
             }
@@ -289,17 +331,22 @@ namespace Enyim.Caching.Memcached
             {
                 try
                 {
-                    int currentRead = this.inputStream.Read(buffer, offset, shouldRead);
+                    int currentRead = _inputStream.Read(buffer, offset, shouldRead);
+                    if (currentRead == count)
+                        break;
                     if (currentRead < 1)
-                        continue;
+                        throw new IOException("The socket seems to be disconnected");
 
                     read += currentRead;
                     offset += currentRead;
                     shouldRead -= currentRead;
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
-                    this.isAlive = false;
+                    if (ex is IOException || ex is SocketException)
+                    {
+                        _isAlive = false;
+                    }
                     throw;
                 }
             }
@@ -311,13 +358,13 @@ namespace Enyim.Caching.Memcached
 
             SocketError status;
 
-            this.socket.Send(data, offset, length, SocketFlags.None, out status);
+            _socket.Send(data, offset, length, SocketFlags.None, out status);
 
             if (status != SocketError.Success)
             {
-                this.isAlive = false;
+                _isAlive = false;
 
-                ThrowHelper.ThrowSocketWriteError(this.endpoint, status);
+                ThrowHelper.ThrowSocketWriteError(_endpoint, status);
             }
         }
 
@@ -327,58 +374,49 @@ namespace Enyim.Caching.Memcached
 
             SocketError status;
 
-#if DEBUG
-            int total = 0;
-            for (int i = 0, C = buffers.Count; i < C; i++)
-                total += buffers[i].Count;
-
-            if (this.socket.Send(buffers, SocketFlags.None, out status) != total)
-                System.Diagnostics.Debugger.Break();
-#else
-            this.socket.Send(buffers, SocketFlags.None, out status);
-#endif
-
-            if (status != SocketError.Success)
-            {
-                this.isAlive = false;
-
-                ThrowHelper.ThrowSocketWriteError(this.endpoint, status);
-            }
-        }
-
-        public async Task WriteSync(IList<ArraySegment<byte>> buffers)
-        {
             try
             {
-                await socket.SendAsync(buffers, SocketFlags.None);
+                _socket.Send(buffers, SocketFlags.None, out status);
+                if (status != SocketError.Success)
+                {
+                    _isAlive = false;
+                    ThrowHelper.ThrowSocketWriteError(_endpoint, status);
+                }
             }
             catch (Exception ex)
             {
-                isAlive = false;
-                _logger.LogError(ex, nameof(PooledSocket.WriteSync));
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
+                _logger.LogError(ex, nameof(PooledSocket.Write));
+                throw;
             }
         }
 
-        /// <summary>
-        /// Receives data asynchronously. Returns true if the IO is pending. Returns false if the socket already failed or the data was available in the buffer.
-        /// p.Next will only be called if the call completes asynchronously.
-        /// </summary>
-        public bool ReceiveAsync(AsyncIOArgs p)
+        public async Task WriteAsync(IList<ArraySegment<byte>> buffers)
         {
-            this.CheckDisposed();
+            CheckDisposed();
 
-            if (!this.IsAlive)
+            try
             {
-                p.Fail = true;
-                p.Result = null;
-
-                return false;
+                var bytesTransferred = await _socket.SendAsync(buffers, SocketFlags.None);
+                if (bytesTransferred <= 0)
+                {
+                    _isAlive = false;
+                    _logger.LogError($"Failed to {nameof(PooledSocket.WriteAsync)}. bytesTransferred: {bytesTransferred}");
+                    ThrowHelper.ThrowSocketWriteError(_endpoint);
+                }
             }
-
-            if (this.helper == null)
-                this.helper = new AsyncSocketHelper(this);
-
-            return this.helper.Read(p);
+            catch (Exception ex)
+            {
+                if (ex is IOException || ex is SocketException)
+                {
+                    _isAlive = false;
+                }
+                _logger.LogError(ex, nameof(PooledSocket.WriteAsync));
+                throw;
+            }
         }
     }
 }

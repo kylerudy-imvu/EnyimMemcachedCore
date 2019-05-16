@@ -80,6 +80,8 @@ namespace Enyim.Caching.Configuration
 
                 SocketPool.QueueTimeout = options.SocketPool.QueueTimeout;
                 _logger.LogInformation($"{nameof(SocketPool.QueueTimeout)}: {SocketPool.QueueTimeout}");
+
+                SocketPool.InitPoolTimeout = options.SocketPool.InitPoolTimeout;
             }
 
             Protocol = options.Protocol;
@@ -172,22 +174,21 @@ namespace Enyim.Caching.Configuration
 
         private void ConfigureServers(MemcachedClientOptions options)
         {
-            Servers = new List<DnsEndPoint>();
+            Servers = new List<EndPoint>();
             foreach (var server in options.Servers)
             {
                 if (!IPAddress.TryParse(server.Address, out var address))
                 {
-                    var ip = Dns.GetHostAddresses(server.Address)
-                        .FirstOrDefault(i => i.AddressFamily == AddressFamily.InterNetwork)?.ToString();
+                    address = Dns.GetHostAddresses(server.Address)
+                        .FirstOrDefault(i => i.AddressFamily == AddressFamily.InterNetwork);
 
-                    if (ip == null)
+                    if (address == null)
                     {
                         _logger.LogError($"Could not resolve host '{server.Address}'.");
                     }
                     else
                     {
-                        _logger.LogInformation($"Memcached server address - {server.Address }({ip}):{server.Port}");
-                        server.Address = ip;
+                        _logger.LogInformation($"Memcached server address - {address}");
                     }
                 }
                 else
@@ -195,7 +196,7 @@ namespace Enyim.Caching.Configuration
                     _logger.LogInformation($"Memcached server address - {server.Address }:{server.Port}");
                 }
 
-                Servers.Add(new DnsEndPoint(server.Address, server.Port));
+                Servers.Add(new IPEndPoint(address, server.Port));
             }
         }
 
@@ -221,7 +222,7 @@ namespace Enyim.Caching.Configuration
         /// <summary>
         /// Gets a list of <see cref="T:IPEndPoint"/> each representing a Memcached server in the pool.
         /// </summary>
-        public IList<DnsEndPoint> Servers { get; private set; }
+        public IList<EndPoint> Servers { get; private set; }
 
         /// <summary>
         /// Gets the configuration of the socket pool.
@@ -278,7 +279,7 @@ namespace Enyim.Caching.Configuration
 
         #region [ interface                     ]
 
-        IList<System.Net.DnsEndPoint> IMemcachedClientConfiguration.Servers
+        IList<EndPoint> IMemcachedClientConfiguration.Servers
         {
             get { return this.Servers; }
         }

@@ -62,7 +62,7 @@ namespace Enyim.Caching.Memcached.Protocol.Text
         }
 
         protected internal override ValueTask<IOperationResult> ReadResponseAsync(PooledSocket socket)
-        { 
+        {
             string response = TextSocketHelper.ReadResponse(socket);
             var result = new TextOperationResult();
 
@@ -75,7 +75,7 @@ namespace Enyim.Caching.Memcached.Protocol.Text
             return new ValueTask<IOperationResult>(result);
         }
 
-        protected internal override bool ReadResponseAsync(PooledSocket socket, System.Action<bool> next)
+        protected internal override Task<bool> ReadResponseAsync(PooledSocket socket, System.Action<bool> next)
         {
             throw new System.NotSupportedException();
         }

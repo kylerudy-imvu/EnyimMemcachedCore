@@ -26,7 +26,7 @@ namespace Enyim.Caching.Memcached.Protocol.Text
             return new ValueTask<IOperationResult>(new TextOperationResult().Pass());
         }
 
-        protected internal override bool ReadResponseAsync(PooledSocket socket, System.Action<bool> next)
+        protected internal override Task<bool> ReadResponseAsync(PooledSocket socket, System.Action<bool> next)
         {
             throw new System.NotSupportedException();
         }
