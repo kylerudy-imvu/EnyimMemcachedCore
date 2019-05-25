@@ -253,7 +253,7 @@ namespace Enyim.Caching
         {
             return Task.FromResult(true);
         }
-        
+
         public bool Replace(string key, object value, int cacheSeconds)
         {
             return true;
@@ -272,6 +272,16 @@ namespace Enyim.Caching
         public Task FlushAllAsync()
         {
             return Task.CompletedTask;
+        }
+
+        public Task<IOperationResult> TouchAsync(string key, DateTime expiresAt)
+        {
+            return Task.FromResult<IOperationResult>(new MutateOperationResult());
+        }
+
+        public Task<IOperationResult> TouchAsync(string key, TimeSpan validFor)
+        {
+            return Task.FromResult<IOperationResult>(new MutateOperationResult());
         }
     }
 }

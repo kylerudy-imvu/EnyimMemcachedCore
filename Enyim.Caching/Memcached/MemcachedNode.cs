@@ -863,6 +863,7 @@ namespace Enyim.Caching.Memcached
                     }
                     else
                     {
+                        _logger.LogInformation($"{op}.{nameof(op.ReadResponseAsync)} result: {readResult.Message}");
                         readResult.Combine(result);
                     }
                     return result;
