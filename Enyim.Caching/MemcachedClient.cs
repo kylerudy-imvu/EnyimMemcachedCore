@@ -744,6 +744,18 @@ namespace Enyim.Caching
 
         #endregion
 
+        #region Touch
+        public async Task<IOperationResult> TouchAsync(string key, DateTime expiresAt)
+        {
+            return await PerformMutateAsync(MutationMode.Touch, key, 0, 0, GetExpiration(null, expiresAt));
+        }
+
+        public async Task<IOperationResult> TouchAsync(string key, TimeSpan validFor)
+        {
+            return await PerformMutateAsync(MutationMode.Touch, key, 0, 0, GetExpiration(validFor, null));
+        }
+        #endregion
+
         private IMutateOperationResult PerformMutate(MutationMode mode, string key, ulong defaultValue, ulong delta, uint expires)
         {
             ulong tmp = 0;
@@ -769,6 +781,40 @@ namespace Enyim.Caching
             {
                 var command = this.pool.OperationFactory.Mutate(mode, hashedKey, defaultValue, delta, expires, cas);
                 var commandResult = node.Execute(command);
+
+                result.Cas = cas = command.CasValue;
+                result.StatusCode = command.StatusCode;
+
+                if (commandResult.Success)
+                {
+                    result.Value = command.Result;
+                    result.Pass();
+                    return result;
+                }
+                else
+                {
+                    result.InnerResult = commandResult;
+                    result.Fail("Mutate operation failed, see InnerResult or StatusCode for more details");
+                }
+
+            }
+
+            // TODO not sure about the return value when the command fails
+            result.Fail("Unable to locate node");
+            return result;
+        }
+
+        protected virtual async Task<IMutateOperationResult> PerformMutateAsync(MutationMode mode, string key, ulong defaultValue, ulong delta, uint expires)
+        {
+            ulong cas = 0;
+            var hashedKey = this.keyTransformer.Transform(key);
+            var node = this.pool.Locate(hashedKey);
+            var result = MutateOperationResultFactory.Create();
+
+            if (node != null)
+            {
+                var command = this.pool.OperationFactory.Mutate(mode, hashedKey, defaultValue, delta, expires, cas);
+                var commandResult = await node.ExecuteAsync(command);
 
                 result.Cas = cas = command.CasValue;
                 result.StatusCode = command.StatusCode;

@@ -13,7 +13,7 @@ namespace Enyim.Caching
 
         bool Set(string key, object value, int cacheSeconds);
         Task<bool> SetAsync(string key, object value, int cacheSeconds);
-        
+
         bool Replace(string key, object value, int cacheSeconds);
         Task<bool> ReplaceAsync(string key, object value, int cacheSeconds);
 
@@ -65,6 +65,9 @@ namespace Enyim.Caching
         CasResult<ulong> Increment(string key, ulong defaultValue, ulong delta, ulong cas);
         CasResult<ulong> Increment(string key, ulong defaultValue, ulong delta, DateTime expiresAt, ulong cas);
         CasResult<ulong> Increment(string key, ulong defaultValue, ulong delta, TimeSpan validFor, ulong cas);
+
+        Task<IOperationResult> TouchAsync(string key, DateTime expiresAt);
+        Task<IOperationResult> TouchAsync(string key, TimeSpan validFor);
 
         bool Remove(string key);
         Task<bool> RemoveAsync(string key);

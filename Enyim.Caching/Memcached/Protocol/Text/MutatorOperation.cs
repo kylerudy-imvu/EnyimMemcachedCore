@@ -44,7 +44,7 @@ namespace Enyim.Caching.Memcached.Protocol.Text
 
             //maybe we should throw an exception when the item is not found?
             if (String.Compare(response, "NOT_FOUND", StringComparison.Ordinal) == 0)
-                return result.Fail("Failed to read response.  Item not found");
+                return result.Fail("Failed to read response. Item not found");
 
             result.Success =
                 UInt64.TryParse(response, NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite, CultureInfo.InvariantCulture, out this.result);
