@@ -58,12 +58,14 @@ namespace Enyim.Caching.Memcached.Protocol.Text
 		/// <returns></returns>
 		private static string ReadLine(PooledSocket socket)
 		{
+            const int SANITY_CHECK_MAX_SIZE = 1024 * 1024 * 10;
 			MemoryStream ms = new MemoryStream(50);
 
 			bool gotR = false;
 			//byte[] buffer = new byte[1];
 
 			int data;
+            int count = 0;
 
 			while (true)
 			{
@@ -86,6 +88,13 @@ namespace Enyim.Caching.Memcached.Protocol.Text
 				}
 
 				ms.WriteByte((byte)data);
+                
+                if(++count > SANITY_CHECK_MAX_SIZE)
+                {
+                    LogSanityException(socket, ms.ToArray());
+                    socket.IsAlive = false;
+                    throw new Exception("KrudySanityCheckException, memcached value beyond expected size");
+                }
 			}
 
 			string retval = Encoding.ASCII.GetString(ms.ToArray(), 0, (int)ms.Length);
@@ -95,6 +104,50 @@ namespace Enyim.Caching.Memcached.Protocol.Text
 
 			return retval;
 		}
+
+        private static void LogSanityException(PooledSocket socket, byte[] valueRead)
+        {
+            log.Error($"KrudySanityCheckEncountered, Received Input: {OutputBuffer(valueRead)}\nSocket Output:\n{socket.PrintStatus()}");
+        }
+
+        private static string OutputBuffer(byte[] valueRead)
+        {
+            if (valueRead == null || valueRead.Length == 0) return "";
+            StringBuilder sb = new StringBuilder();
+            byte lastRead = valueRead[0];
+            int count = 1;
+
+            void output()
+            {
+                if (count < 10)
+                {
+                    for (int i = 0; i < count; i++) sb.AppendFormat("{0:X2}", lastRead);
+                }
+                else
+                {
+                    sb.AppendFormat("({0:X2} repeated {1} times)", lastRead, count);
+                }
+            }
+
+            for (int i = 1; i < valueRead.Length; i++)
+            {
+                var val = valueRead[i];
+                if(val != lastRead)
+                {
+                    output();
+                    lastRead = val;
+                    count = 1;
+                }
+                else
+                {
+                    count++;
+                }
+            }
+
+            output();
+
+            return sb.ToString();
+        }
 
 		/// <summary>
 		/// Gets the bytes representing the specified command. returned buffer can be used to streamline multiple writes into one Write on the Socket

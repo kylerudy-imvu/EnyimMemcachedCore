@@ -23,6 +23,7 @@ namespace Enyim.Caching.Memcached
         private readonly int _connectionTimeout;
 
         private NetworkStream _inputStream;
+        private List<string> _capturedStreamExceptions = new List<string>();
 
         public PooledSocket(EndPoint endpoint, TimeSpan connectionTimeout, TimeSpan receiveTimeout, ILogger logger)
         {
@@ -257,10 +258,17 @@ namespace Enyim.Caching.Memcached
                 {
                     _isAlive = false;
                 }
-
+                _capturedStreamExceptions.Add(PrintException(ex));
                 throw;
             }
         }
+
+        public string PrintStatus() => $"IsAlive: {_isAlive}\nCanRead: {_inputStream.CanRead}\nDataAvailable: {_inputStream.DataAvailable}\nStoredExceptions:\n{PrintStoredExceptions()}";
+
+        public string PrintStoredExceptions() => string.Join("\n", _capturedStreamExceptions);
+
+        private static string PrintException(Exception ex) =>
+            $"{ex.GetType().Name}: {ex.Message}\nSource:{ex.Source}\nTargetSite: {ex.TargetSite}\nStackTrace: {ex.StackTrace}";
 
         public int ReadByteAsync()
         {
@@ -307,7 +315,7 @@ namespace Enyim.Caching.Memcached
                     {
                         _isAlive = false;
                     }
-
+                    _capturedStreamExceptions.Add(PrintException(ex));
                     throw;
                 }
             }
@@ -347,6 +355,7 @@ namespace Enyim.Caching.Memcached
                     {
                         _isAlive = false;
                     }
+                    _capturedStreamExceptions.Add(PrintException(ex));
                     throw;
                 }
             }
